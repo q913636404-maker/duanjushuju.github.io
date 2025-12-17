@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>出海短剧广告投放数据看板</title>
+    <!-- 引入外部资源 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+    
+    <!-- Tailwind 自定义配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#FF7D00',
+                        neutral: {
+                            100: '#F5F7FA',
+                            200: '#E5E6EB',
+                            300: '#C9CDD4',
+                            400: '#86909C',
+                            500: '#4E5969',
+                            600: '#272E3B',
+                            700: '#1D2129',
+                        },
+                        ios: '#5AC8FA',
+                        android: '#34C759'
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        card: '0 2px 12px 0 rgba(0, 0, 0, 0.08)',
+                        hover: '0 4px 16px 0 rgba(22, 93, 255, 0.15)',
+                    }
+                },
+            }
+        }
+    </script>
+    
+    <!-- 自定义样式 -->
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .card-transition {
+                transition: all 0.3s ease;
+            }
+            .number-animate {
+                transition: all 0.5s ease-in-out;
+            }
+            .scrollbar-hide::-webkit-scrollbar {
+                display: none;
+            }
+            .scrollbar-hide {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+            .dashboard-grid {
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            }
+        }
+    </style>
+    
+    <!-- 引入 Inter 字体 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body class="font-inter bg-neutral-100 text-neutral-700 min-h-screen">
+    <!-- 顶部导航栏 -->
+    <header class="sticky top-0 z-50 bg-white shadow-sm">
+        <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <i class="fa fa-line-chart text-primary text-2xl"></i>
+                <h1 class="text-lg md:text-xl font-bold text-neutral-700">Ad Analytics Dashboard</h1>
+            </div>
+            <div class="flex items-center gap-3">
+                <button class="p-2 rounded-full hover:bg-neutral-100 transition-colors">
+                    <i class="fa fa-refresh text-neutral-500"></i>
+                </button>
+                <button class="p-2 rounded-full hover:bg-neutral-100 transition-colors">
+                    <i class="fa fa-download text-neutral-500"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-4">
+        <!-- 筛选条件区域（新增设备筛选） -->
+        <section class="bg-white rounded-lg shadow-card p-4 mb-6">
+            <!-- 调整网格列数：lg:grid-cols-7 适配新增的设备筛选 -->
+            <div class="grid grid-cols-1 md:grid-cols-5 lg:grid-cols-7 gap-4">
+                <!-- 时间筛选 -->
+                <div class="col-span-1">
+                    <label class="block text-sm font-medium text-neutral-500 mb-1">时间范围</label>
+                    <div class="relative">
+                        <select id="time-filter" class="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                            <option value="today">今天</option>
+                            <option value="yesterday">昨天</option>
+                            <option value="7days" selected>7日内</option>
+                            <option value="30days">30天内</option>
+                            <option value="1month">1个月</option>
+                            <option value="1quarter">1个季度</option>
+                            <option value="1year">1年</option>
+                            <option value="custom">自定义</option>
+                        </select>
+                        <div id="custom-date-picker" class="hidden mt-2">
+                            <input type="text" id="date-range" class="w-full px-3 py-2 border border-neutral-200 rounded-lg" placeholder="选择日期范围">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 产品类型筛选 -->
+                <div class="col-span-1">
+                    <label class="block text-sm font-medium text-neutral-500 mb-1">产品类型</label>
+                    <select id="product-type" class="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                        <option value="all" selected>全部</option>
+                        <option value="iap">IAP</option>
+                        <option value="iaa">IAA</option>
+                    </select>
+                </div>
+
+                <!-- 投放方式筛选 -->
+                <div class="col-span-1">
+                    <label class="block text-sm font-medium text-neutral-500 mb-1">投放方式</label>
+                    <select id="delivery-type" class="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                        <option value="all" selected>全部</option>
+                        <option value="app">APP直投</option>
+                        <option value="w2a">W2A</option>
+                    </select>
+                </div>
+
+                <!-- 媒体筛选 -->
+                <div class="col-span-1">
+                    <label class="block text-sm font-medium text-neutral-500 mb-1">投放媒体</label>
+                    <select id="media-filter" class="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                        <option value="all" selected>全部</option>
+                        <option value="facebook">Facebook</option>
+                        <option value="tiktok">TikTok</option>
+                        <option value="google">Google</option>
+                        <option value="snapchat">Snapchat</option>
+                    </select>
+                </div>
+
+                <!-- 国家/地区筛选 -->
+                <div class="col-span-1">
+                    <label class="block text-sm font-medium text-neutral-500 mb-1">国家/地区</label>
+                    <select id="country-filter" class="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                        <option value="all" selected>全部</option>
+                        <option value="us">美国</option>
+                        <option value="uk">英国</option>
+                        <option value="au">澳大利亚</option>
+                        <option value="ca">加拿大</option>
+                        <option value="sg">新加坡</option>
+                    </select>
+                </div>
+
+                <!-- 新增：设备类型筛选 -->
+                <div class="col-span-1">
+                    <label class="block text-sm font-medium text-neutral-500 mb-1">设备类型</label>
+                    <select id="device-filter" class="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                        <option value="all" selected>全部</option>
+                        <option value="ios">iOS</option>
+                        <option value="android">Android</option>
+                    </select>
+                </div>
+
+                <!-- 优化方式筛选 -->
+                <div class="col-span-1">
+                    <label class="block text-sm font-medium text-neutral-500 mb-1">优化方式</label>
+                    <select id="optimization-filter" class="w-full px-3 py-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                        <option value="all" selected>全部</option>
+                        <option value="install">Install</option>
+                        <option value="aeo">AEO</option>
+                        <option value="vo">VO</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-4 flex justify-end">
+                <button id="apply-filter" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors flex items-center gap-2">
+                    <i class="fa fa-filter"></i>
+                    <span>应用筛选</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- 大盘数据栏 -->
+        <section class="bg-white rounded-lg shadow-card p-4 mb-6">
+            <h2 class="font-semibold text-neutral-700 mb-4">大盘核心数据</h2>
+            <div class="grid dashboard-grid gap-4">
+                <!-- 广告展示数 -->
+                <div class="bg-neutral-50 rounded-lg p-3 card-transition hover:shadow-sm">
+                    <p class="text-xs text-neutral-500 mb-1">广告展示数</p>
+                    <h3 class="text-lg font-bold text-neutral-700 number-animate" id="impressions-value">1,284,593</h3>
+                    <div class="flex items-center text-xs mt-1">
+                        <span class="text-green-500 flex items-center">
+                            <i class="fa fa-arrow-up mr-1"></i>8.2%
+                        </span>
+                        <span class="text-neutral-400 ml-1">较昨日</span>
+                    </div>
+                </div>
+
+                <!-- 广告消耗 -->
+                <div class="bg-neutral-50 rounded-lg p-3 card-transition hover:shadow-sm">
+                    <p class="text-xs text-neutral-500 mb-1">广告消耗 (USD)</p>
+                    <h3 class="text-lg font-bold text-neutral-700 number-animate" id="spend-value">$16,489.27</h3>
+                    <div class="flex items-center text-xs mt-1">
+                        <span class="text-red-500 flex items-center">
+                            <i class="fa fa-arrow-up mr-1"></i>5.3%
+                        </span>
+                        <span class="text-neutral-400 ml-1">较昨日</span>
+                    </div>
+                </div>
+
+                <!-- 应用安装数 -->
+                <div class="bg-neutral-50 rounded-lg p-3 card-transition hover:shadow-sm">
+                    <p class="text-xs text-neutral-500 mb-1">应用安装数</p>
+                    <h3 class="text-lg font-bold text-neutral-700 number-animate" id="installs-value">8,578</h3>
+                    <div class="flex items-center text-xs mt-1">
+                        <span class="text-green-500 flex items-center">
+                            <i class="fa fa-arrow-up mr-1"></i>12.7%
+                        </span>
+                        <span class="text-neutral-400 ml-1">较昨日</span>
+                    </div>
+                </div>
+
+                <!-- CPM -->
+                <div class="bg-neutral-50 rounded-lg p-3 card-transition hover:shadow-sm">
+                    <p class="text-xs text-neutral-500 mb-1">CPM (千次展示成本)</p>
+                    <h3 class="text-lg font-bold text-neutral-700 number-animate" id="total-cpm-value">$12.85</h3>
+                    <div class="flex items-center text-xs mt-1">
+                        <span class="text-green-500 flex items-center">
+                            <i class="fa fa-arrow-up mr-1"></i>2.4%
+                        </span>
+                        <span class="text-neutral-400 ml-1">较昨日</span>
+                    </div>
+                </div>
+
+                <!-- CPI -->
+                <div class="bg-neutral-50 rounded-lg p-3 card-transition hover:shadow-sm">
+                    <p class="text-xs text-neutral-500 mb-1">CPI (单次安装成本)</p>
+                    <h3 class="text-lg font-bold text-neutral-700 number-animate" id="total-cpi-value">$1.92</h3>
+                    <div class="flex items-center text-xs mt-1">
+                        <span class="text-green-500 flex items-center">
+                            <i class="fa fa-arrow-down mr-1"></i>1.8%
+                        </span>
+                        <span class="text-neutral-400 ml-1">较昨日</span>
+                    </div>
+                </div>
+
+                <!-- CTR -->
+                <div class="bg-neutral-50 rounded-lg p-3 card-transition hover:shadow-sm">
+                    <p class="text-xs text-neutral-500 mb-1">CTR (点击率)</p>
+                    <h3 class="text-lg font-bold text-neutral-700 number-animate" id="total-ctr-value">2.87%</h3>
+                    <div class="flex items-center text-xs mt-1">
+                        <span class="text-red-500 flex items-center">
+                            <i class="fa fa-arrow-down mr-1"></i>0.5%
+                        </span>
+                        <span class="text-neutral-400 ml-1">较昨日</span>
+                    </div>
+                </div>
+
+                <!-- ROAS -->
+                <div class="bg-neutral-50 rounded-lg p-3 card-transition hover:shadow-sm">
+                    <p class="text-xs text-neutral-500 mb-1">总ROAS (D0-D7)</p>
+                    <h3 class="text-lg font-bold text-neutral-700 number-animate" id="total-roas-value">3.28x</h3>
+                    <div class="flex items-center text-xs mt-1">
+                        <span class="text-green-500 flex items-center">
+                            <i class="fa fa-arrow-up mr-1"></i>5.7%
+                        </span>
+                        <span class="text-neutral-400 ml-1">较昨日</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 核心数据概览 -->
+        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <!-- CPM 卡片 -->
+            <div class="bg-white rounded-lg shadow-card p-4 card-transition hover:shadow-hover">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <p class="text-neutral-400 text-sm">CPM (千次展示成本)</p>
+                        <h3 class="text-2xl font-bold text-neutral-700 number-animate" id="cpm-value">$12.85</h3>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <i class="fa fa-money text-primary"></i>
+                    </div>
+                </div>
+                <div class="flex items-center text-sm">
+                    <span class="text-green-500 flex items-center">
+                        <i class="fa fa-arrow-up mr-1"></i>2.4%
+                    </span>
+                    <span class="text-neutral-400 ml-2">较昨日</span>
+                </div>
+            </div>
+
+            <!-- CTR 卡片 -->
+            <div class="bg-white rounded-lg shadow-card p-4 card-transition hover:shadow-hover">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <p class="text-neutral-400 text-sm">CTR (点击率)</p>
+                        <h3 class="text-2xl font-bold text-neutral-700 number-animate" id="ctr-value">2.87%</h3>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <i class="fa fa-chart-line text-primary"></i>
+                    </div>
+                </div>
+                <div class="flex items-center text-sm">
+                    <span class="text-red-500 flex items-center">
+                        <i class="fa fa-arrow-down mr-1"></i>0.5%
+                    </span>
+                    <span class="text-neutral-400 ml-2">较昨日</span>
+                </div>
+            </div>
+
+            <!-- CPI 卡片 -->
+            <div class="bg-white rounded-lg shadow-card p-4 card-transition hover:shadow-hover">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <p class="text-neutral-400 text-sm">CPI (单次安装成本)</p>
+                        <h3 class="text-2xl font-bold text-neutral-700 number-animate" id="cpi-value">$1.92</h3>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <i class="fa fa-download text-primary"></i>
+                    </div>
+                </div>
+                <div class="flex items-center text-sm">
+                    <span class="text-green-500 flex items-center">
+                        <i class="fa fa-arrow-down mr-1"></i>1.8%
+                    </span>
+                    <span class="text-neutral-400 ml-2">较昨日</span>
+                </div>
+            </div>
+
+            <!-- 总ROAS 卡片 -->
+            <div class="bg-white rounded-lg shadow-card p-4 card-transition hover:shadow-hover">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <p class="text-neutral-400 text-sm">总ROAS (D0-D7)</p>
+                        <h3 class="text-2xl font-bold text-neutral-700 number-animate" id="roas-value">3.28x</h3>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <i class="fa fa-bar-chart text-primary"></i>
+                    </div>
+                </div>
+                <div class="flex items-center text-sm">
+                    <span class="text-green-500 flex items-center">
+                        <i class="fa fa-arrow-up mr-1"></i>5.7%
+                    </span>
+                    <span class="text-neutral-400 ml-2">较昨日</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- 图表区域 -->
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <!-- 核心指标趋势图 -->
+            <div class="bg-white rounded-lg shadow-card p-4 card-transition hover:shadow-hover">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="font-semibold text-neutral-700">核心指标趋势</h2>
+                    <div class="flex gap-2">
+                        <button class="px-2 py-1 text-xs rounded bg-primary/10 text-primary" data-target="cpm">CPM</button>
+                        <button class="px-2 py-1 text-xs rounded bg-neutral-100 text-neutral-500" data-target="ctr">CTR</button>
+                        <button class="px-2 py-1 text-xs rounded bg-neutral-100 text-neutral-500" data-target="cpi">CPI</button>
+                    </div>
+                </div>
+                <div class="h-80">
+                    <canvas id="metrics-trend-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- D0-D7 ROAS 图表 -->
+            <div class="bg-white rounded-lg shadow-card p-4 card-transition hover:shadow-hover">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="font-semibold text-neutral-700">D0-D7 ROAS 分布</h2>
+                    <select id="roas-group-by" class="px-2 py-1 text-xs border border-neutral-200 rounded">
+                        <option value="day">按天</option>
+                        <option value="media">按媒体</option>
+                        <option value="product">按产品类型</option>
+                        <option value="optimization">按优化方式</option>
+                        <option value="device">按设备类型</option> <!-- 新增按设备分组 -->
+                    </select>
+                </div>
+                <div class="h-80">
+                    <canvas id="roas-distribution-chart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- 媒体对比图表 -->
+        <section class="bg-white rounded-lg shadow-card p-4 mb-6 card-transition hover:shadow-hover">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="font-semibold text-neutral-700">各媒体投放效果对比</h2>
+                <select id="media-metric" class="px-2 py-1 text-xs border border-neutral-200 rounded">
+                    <option value="roas">ROAS</option>
+                    <option value="cpm">CPM</option>
+                    <option value="ctr">CTR</option>
+                    <option value="cpi">CPI</option>
+                </select>
+            </div>
+            <div class="h-64">
+                <canvas id="media-comparison-chart"></canvas>
+            </div>
+        </section>
+
+        <!-- 详细数据表格（新增设备列） -->
+        <section class="bg-white rounded-lg shadow-card p-4 card-transition hover:shadow-hover">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="font-semibold text-neutral-700">投放数据明细</h2>
+                <div class="flex gap-2">
+                    <input type="text" id="table-search" placeholder="搜索..." class="px-3 py-1 text-sm border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
+                    <button class="px-2 py-1 text-sm bg-primary text-white rounded-lg">
+                        <i class="fa fa-search"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="overflow-x-auto scrollbar-hide">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-neutral-200">
+                            <th class="text-left py-3 px-4 font-medium text-neutral-500">日期</th>
+                            <th class="text-left py-3 px-4 font-medium text-neutral-500">产品类型</th>
+                            <th class="text-left py-3 px-4 font-medium text-neutral-500">投放方式</th>
+                            <th class="text-left py-3 px-4 font-medium text-neutral-500">媒体</th>
+                            <th class="text-left py-3 px-4 font-medium text-neutral-500">国家/地区</th>
+                            <th class="text-left py-3 px-4 font-medium text-neutral-500">设备类型</th> <!-- 新增设备列 -->
+                            <th class="text-left py-3 px-4 font-medium text-neutral-500">优化方式</th>
+                            <th class="text-right py-3 px-4 font-medium text-neutral-500">CPM ($)</th>
+                            <th class="text-right py-3 px-4 font-medium text-neutral-500">CTR (%)</th>
+                            <th class="text-right py-3 px-4 font-medium text-neutral-500">CPI ($)</th>
+                            <th class="text-right py-3 px-4 font-medium text-neutral-500">D0 ROAS (x)</th>
+                            <th class="text-right py-3 px-4 font-medium text-neutral-500">D7 ROAS (x)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="data-table-body">
+                        <!-- 表格数据由JS动态生成 -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="mt-4 flex justify-between items-center">
+                <p class="text-sm text-neutral-500">共 <span id="total-records">0</span> 条记录</p>
+                <div class="flex gap-2">
+                    <button class="px-3 py-1 text-sm border border-neutral-200 rounded-lg hover:bg-neutral-100 disabled:opacity-50" id="prev-page" disabled>
+                        上一页
+                    </button>
+                    <span class="text-sm" id="page-info">1 / 5</span>
+                    <button class="px-3 py-1 text-sm border border-neutral-200 rounded-lg hover:bg-neutral-100" id="next-page">
+                        下一页
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-white border-t border-neutral-200 py-4 mt-8">
+        <div class="container mx-auto px-4 text-center text-neutral-400 text-sm">
+            <p>© 2025 出海短剧广告投放数据看板 | 数据更新时间: <span id="update-time">2025-12-17 15:30:00</span></p>
+        </div>
+    </footer>
+
+    <script>
+        // 全局变量
+        let currentPage = 1;
+        const pageSize = 10;
+        let chartInstances = {};
+        let mockData = [];
+        let currentTimeRange = '7days'; // 默认时间范围
+
+        // 初始化日期选择器
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化自定义日期选择器
+            const timeFilter = document.getElementById('time-filter');
+            const customDatePicker = document.getElementById('custom-date-picker');
+            const dateRangeInput = document.getElementById('date-range');
+            
+            // 初始化flatpickr日期范围选择器
+            flatpickr(dateRangeInput, {
+                mode: 'range',
+                dateFormat: 'Y-m-d',
+                locale: {
+                    firstDayOfWeek: 1
+                }
+            });
+
+            // 时间筛选器切换事件
+            timeFilter.addEventListener('change', function() {
+                currentTimeRange = this.value;
+                if (this.value === 'custom') {
+                    customDatePicker.classList.remove('hidden');
+                } else {
+                    customDatePicker.classList.add('hidden');
+                }
+                updateDashboard();
+            });
+
+            // 筛选按钮点击事件
+            document.getElementById('apply-filter').addEventListener('click', updateDashboard);
+            
+            // 初始化模拟数据（默认7天）
+            generateMockData(getDaysByTimeRange(currentTimeRange));
+            
+            // 初始化图表
+            initCharts();
+            
+            // 初始化表格数据
+            updateTableData();
+            
+            // 分页按钮事件
+            document.getElementById('prev-page').addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    updateTableData();
+                }
+            });
+            
+            document.getElementById('next-page').addEventListener('click', () => {
+                const filteredData = getFilteredData();
+                const totalPages = Math.ceil(filteredData.length / pageSize);
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    updateTableData();
+                }
+            });
+            
+            // 指标切换事件（核心趋势图）
+            document.querySelectorAll('[data-target]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // 切换按钮样式
+                    document.querySelectorAll('[data-target]').forEach(b => {
+                        b.classList.remove('bg-primary/10', 'text-primary');
+                        b.classList.add('bg-neutral-100', 'text-neutral-500');
+                    });
+                    this.classList.remove('bg-neutral-100', 'text-neutral-500');
+                    this.classList.add('bg-primary/10', 'text-primary');
+                    
+                    // 更新图表
+                    updateMetricsTrendChart(this.dataset.target);
+                });
+            });
+            
+            // ROAS分组切换事件（新增按设备分组）
+            document.getElementById('roas-group-by').addEventListener('change', updateROASDistributionChart);
+            
+            // 媒体指标切换事件
+            document.getElementById('media-metric').addEventListener('change', updateMediaComparisonChart);
+        });
+
+        // 根据时间范围获取对应的天数
+        function getDaysByTimeRange(timeRange) {
+            const now = new Date();
+            switch(timeRange) {
+                case 'today':
+                    return 1;
+                case 'yesterday':
+                    return 1;
+                case '7days':
+                    return 7;
+                case '30days':
+                    return 30;
+                case '1month':
+                    // 获取当前月的天数（自然月）
+                    return new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+                case '1quarter':
+                    // 1个季度=90天
+                    return 90;
+                case '1year':
+                    // 1年=365天（忽略闰年）
+                    return 365;
+                default:
+                    return 7;
+            }
+        }
+
+        // 生成时间标签（适配不同时间范围）
+        function generateTimeLabels(days) {
+            const labels = [];
+            const now = new Date();
+            
+            // 根据天数判断显示格式
+            if (days <= 7) {
+                // 7天内：显示 月/日
+                for (let i = days - 1; i >= 0; i--) {
+                    const date = new Date(now);
+                    date.setDate(date.getDate() - i);
+                    labels.push(`${date.getMonth() + 1}/${date.getDate()}`);
+                }
+            } else if (days <= 31) {
+                // 1个月内：显示 月/日
+                for (let i = days - 1; i >= 0; i -= 2) { // 每2天显示一个标签，避免拥挤
+                    const date = new Date(now);
+                    date.setDate(date.getDate() - i);
+                    labels.push(`${date.getMonth() + 1}/${date.getDate()}`);
+                }
+            } else if (days <= 90) {
+                // 1个季度：显示 月/周
+                const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+                let currentMonth = -1;
+                let weekCount = 1;
+                for (let i = days - 1; i >= 0; i -= 7) { // 按周显示
+                    const date = new Date(now);
+                    date.setDate(date.getDate() - i);
+                    if (date.getMonth() !== currentMonth) {
+                        currentMonth = date.getMonth();
+                        weekCount = 1;
+                    }
+                    labels.push(`${monthNames[currentMonth]}第${weekCount}周`);
+                    weekCount++;
+                }
+            } else {
+                // 1年：显示 月份
+                const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
+                for (let i = 11; i >= 0; i--) { // 显示12个月
+                    const date = new Date(now);
+                    date.setMonth(date.getMonth() - i);
+                    labels.push(monthNames[date.getMonth()]);
+                }
+            }
+            return labels;
+        }
+
+        // 生成模拟数据（新增设备类型字段）
+        function generateMockData(days) {
+            const products = ['iap', 'iaa'];
+            const deliveryTypes = ['app', 'w2a'];
+            const medias = ['facebook', 'tiktok', 'google', 'snapchat'];
+            const countries = ['us', 'uk', 'au', 'ca', 'sg'];
+            const devices = ['ios', 'android']; // 新增设备类型数组
+            const optimizations = ['install', 'aeo', 'vo'];
+            
+            mockData = [];
+            
+            // 生成对应天数的数据
+            for (let d = 0; d < days; d++) {
+                const date = new Date();
+                date.setDate(date.getDate() - d);
+                const dateStr = date.toISOString().split('T')[0];
+                
+                // 为每个维度组合生成数据
+                products.forEach(product => {
+                    deliveryTypes.forEach(delivery => {
+                        medias.forEach(media => {
+                            countries.forEach(country => {
+                                devices.forEach(device => { // 遍历设备类型
+                                    optimizations.forEach(optimization => {
+                                        // 生成随机数据（随时间范围调整数值规模）
+                                        const baseMultiplier = days > 90 ? 2 : 1; // 1年数据数值放大
+                                        // 设备差异化：iOS的CPI略高，ROAS略好
+                                        const deviceMultiplier = device === 'ios' ? 1.2 : 0.9;
+                                        const cpm = (Math.random() * 10 + 8 * baseMultiplier).toFixed(2);
+                                        const ctr = (Math.random() * 2 + 1).toFixed(2);
+                                        const cpi = (Math.random() * 1.5 + 1 * baseMultiplier * deviceMultiplier).toFixed(2);
+                                        const d0Roas = (Math.random() * 2 + 1 * baseMultiplier * (device === 'ios' ? 1.1 : 0.95)).toFixed(2);
+                                        const d7Roas = (Math.random() * 3 + 2 * baseMultiplier * (device === 'ios' ? 1.15 : 0.9)).toFixed(2);
+                                        
+                                        mockData.push({
+                                            date: dateStr,
+                                            product: product,
+                                            delivery: delivery,
+                                            media: media,
+                                            country: country,
+                                            device: device, // 新增设备字段
+                                            optimization: optimization,
+                                            cpm: cpm,
+                                            ctr: ctr,
+                                            cpi: cpi,
+                                            d0Roas: d0Roas,
+                                            d7Roas: d7Roas
+                                        });
+                                    });
+                                });
+                            });
+                        });
+                    });
+                });
+            }
+            
+            // 更新总记录数
+            document.getElementById('total-records').textContent = mockData.length;
+        }
+
+        // 获取筛选后的数据（新增设备筛选逻辑）
+        function getFilteredData() {
+            // 获取所有筛选条件
+            const productFilter = document.getElementById('product-type').value;
+            const deliveryFilter = document.getElementById('delivery-type').value;
+            const mediaFilter = document.getElementById('media-filter').value;
+            const countryFilter = document.getElementById('country-filter').value;
+            const deviceFilter = document.getElementById('device-filter').value; // 新增设备筛选
+            const optimizationFilter = document.getElementById('optimization-filter').value;
+            
+            // 过滤数据
+            return mockData.filter(item => {
+                if (productFilter !== 'all' && item.product !== productFilter) return false;
+                if (deliveryFilter !== 'all' && item.delivery !== deliveryFilter) return false;
+                if (mediaFilter !== 'all' && item.media !== mediaFilter) return false;
+                if (countryFilter !== 'all' && item.country !== countryFilter) return false;
+                if (deviceFilter !== 'all' && item.device !== deviceFilter) return false; // 设备筛选逻辑
+                if (optimizationFilter !== 'all' && item.optimization !== optimizationFilter) return false;
+                return true;
+            });
+        }
+
+        // 初始化所有图表
+        function initCharts() {
+            // 初始化核心指标趋势图
+            initMetricsTrendChart();
+            
+            // 初始化ROAS分布图表
+            initROASDistributionChart();
+            
+            // 初始化媒体对比图表
+            initMediaComparisonChart();
+        }
+
+        // 初始化核心指标趋势图
+        function initMetricsTrendChart() {
+            const ctx = document.getElementById('metrics-trend-chart').getContext('2d');
+            const days = getDaysByTimeRange(currentTimeRange);
+            const labels = generateTimeLabels(days);
+            
+            // 生成随机CPM数据
+            const cpmData = labels.map(() => (Math.random() * 10 + 8).toFixed(2));
+            
+            chartInstances.metricsTrend = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'CPM ($)',
+                        data: cpmData,
+                        borderColor: '#165DFF',
+                        backgroundColor: 'rgba(22, 93, 255, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            titleColor: '#1D2129',
+                            bodyColor: '#4E5969',
+                            borderColor: '#E5E6EB',
+                            borderWidth: 1,
+                            padding: 10,
+                            boxPadding: 5,
+                            usePointStyle: true,
+                            callbacks: {
+                                label: function(context) {
+                                    return `CPM: $${context.raw}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#86909C',
+                                // 适配长标签，自动旋转
+                                maxRotation: 45,
+                                minRotation: 0
+                            }
+                        },
+                        y: {
+                            beginAtZero: false,
+                            grid: {
+                                color: '#F5F7FA'
+                            },
+                            ticks: {
+                                color: '#86909C',
+                                callback: function(value) {
+                                    return '$' + value;
+                                }
+                            }
+                        }
+                    },
+                    interaction: {
+                        mode: 'nearest',
+                        axis: 'x',
+                        intersect: false
+                    },
+                    animations: {
+                        tension: {
+                            duration: 1000,
+                            easing: 'linear'
+                        }
+                    }
+                }
+            });
+        }
+
+        // 更新核心指标趋势图
+        function updateMetricsTrendChart(metric = 'cpm') {
+            const chart = chartInstances.metricsTrend;
+            const days = getDaysByTimeRange(currentTimeRange);
+            const labels = generateTimeLabels(days);
+            
+            // 更新标签
+            chart.data.labels = labels;
+            
+            // 根据选中的指标生成对应数据
+            let data, label, color;
+            const baseMultiplier = days > 90 ? 2 : 1; // 1年数据数值放大
+            switch(metric) {
+                case 'cpm':
+                    data = labels.map(() => (Math.random() * 10 + 8 * baseMultiplier).toFixed(2));
+                    label = 'CPM ($)';
+                    color = '#165DFF';
+                    break;
+                case 'ctr':
+                    data = labels.map(() => (Math.random() * 2 + 1).toFixed(2));
+                    label = 'CTR (%)';
+                    color = '#FF7D00';
+                    break;
+                case 'cpi':
+                    data = labels.map(() => (Math.random() * 1.5 + 1 * baseMultiplier).toFixed(2));
+                    label = 'CPI ($)';
+                    color = '#00B42A';
+                    break;
+            }
+            
+            // 更新图表数据
+            chart.data.datasets[0].label = label;
+            chart.data.datasets[0].data = data;
+            chart.data.datasets[0].borderColor = color;
+            chart.data.datasets[0].backgroundColor = color + '20';
+            
+            // 更新Y轴刻度格式
+            chart.options.scales.y.ticks.callback = function(value) {
+                if (metric === 'ctr') {
+                    return value + '%';
+                } else {
+                    return '$' + value;
+                }
+            };
+            
+            // 更新tooltip标签
+            chart.options.plugins.tooltip.callbacks.label = function(context) {
+                if (metric === 'ctr') {
+                    return `${label}: ${context.raw}%`;
+                } else {
+                    return `${label}: $${context.raw}`;
+                }
+            };
+            
+            chart.update();
+        }
+
+        // 初始化ROAS分布图表
+        function initROASDistributionChart() {
+            const ctx = document.getElementById('roas-distribution-chart').getContext('2d');
+            
+            // D0-D7标签
+            const labels = ['D0', 'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7'];
+            
+            // 生成随机ROAS数据
+            const d0D7Roas = labels.map(() => (Math.random() * 3 + 1).toFixed(2));
+            
+            chartInstances.roasDistribution = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'ROAS (x)',
+                        data: d0D7Roas,
+                        backgroundColor: labels.map((_, i) => {
+                            const alpha = 0.7 + (i * 0.05);
+                            return `rgba(22, 93, 255, ${alpha})`;
+                        }),
+                        borderRadius: 4,
+                        barPercentage: 0.6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            titleColor: '#1D2129',
+                            bodyColor: '#4E5969',
+                            borderColor: '#E5E6EB',
+                            borderWidth: 1,
+                            padding: 10,
+                            boxPadding: 5,
+                            callbacks: {
+                                label: function(context) {
+                                    return `ROAS: ${context.raw}x`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#86909C'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: '#F5F7FA'
+                            },
+                            ticks: {
+                                color: '#86909C',
+                                callback: function(value) {
+                                    return value + 'x';
+                                }
+                            }
+                        }
+                    },
+                    animations: {
+                        duration: 500,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        }
+
+        // 更新ROAS分布图表（新增按设备分组）
+        function updateROASDistributionChart() {
+            const chart = chartInstances.roasDistribution;
+            const groupBy = document.getElementById('roas-group-by').value;
+            const days = getDaysByTimeRange(currentTimeRange);
+            const baseMultiplier = days > 90 ? 2 : 1; // 1年数据数值放大
+            
+            let labels, data, colors;
+            
+            switch(groupBy) {
+                case 'day':
+                    labels = ['D0', 'D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7'];
+                    data = labels.map(() => (Math.random() * 3 + 1 * baseMultiplier).toFixed(2));
+                    colors = labels.map((_, i) => `rgba(22, 93, 255, ${0.7 + (i * 0.05)})`);
+                    break;
+                case 'media':
+                    labels = ['Facebook', 'TikTok', 'Google', 'Snapchat'];
+                    data = labels.map(() => (Math.random() * 4 + 1 * baseMultiplier).toFixed(2));
+                    colors = ['#165DFF', '#FF7D00', '#00B42A', '#722ED1'];
+                    break;
+                case 'product':
+                    labels = ['IAP', 'IAA'];
+                    data = labels.map(() => (Math.random() * 4 + 1 * baseMultiplier).toFixed(2));
+                    colors = ['#165DFF', '#FF7D00'];
+                    break;
+                case 'optimization':
+                    labels = ['Install', 'AEO', 'VO'];
+                    data = labels.map(() => (Math.random() * 4 + 1 * baseMultiplier).toFixed(2));
+                    colors = ['#165DFF', '#00B42A', '#722ED1'];
+                    break;
+                case 'device': // 新增按设备分组
+                    labels = ['iOS', 'Android'];
+                    data = labels.map((label, idx) => {
+                        // iOS ROAS略高，CPI略高，符合真实业务特征
+                        const deviceMultiplier = label === 'iOS' ? 1.15 : 0.9;
+                        return (Math.random() * 4 + 1 * baseMultiplier * deviceMultiplier).toFixed(2);
+                    });
+                    colors = ['#5AC8FA', '#34C759']; // iOS蓝/Android绿
+                    break;
+            }
+            
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = data;
+            chart.data.datasets[0].backgroundColor = colors;
+            chart.update();
+        }
+
+        // 初始化媒体对比图表
+        function initMediaComparisonChart() {
+            const ctx = document.getElementById('media-comparison-chart').getContext('2d');
+            
+            const labels = ['Facebook', 'TikTok', 'Google', 'Snapchat'];
+            const roasData = labels.map(() => (Math.random() * 4 + 1).toFixed(2));
+            
+            chartInstances.mediaComparison = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'ROAS (x)',
+                        data: roasData,
+                        backgroundColor: 'rgba(22, 93, 255, 0.2)',
+                        borderColor: '#165DFF',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#165DFF',
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            titleColor: '#1D2129',
+                            bodyColor: '#4E5969',
+                            borderColor: '#E5E6EB',
+                            borderWidth: 1,
+                            padding: 10,
+                            boxPadding: 5
+                        }
+                    },
+                    scales: {
+                        r: {
+                            angleLines: {
+                                color: '#F5F7FA'
+                            },
+                            grid: {
+                                color: '#F5F7FA'
+                            },
+                            pointLabels: {
+                                color: '#4E5969',
+                                font: {
+                                    weight: '500'
+                                }
+                            },
+                            ticks: {
+                                backdropColor: 'transparent',
+                                color: '#86909C',
+                                callback: function(value) {
+                                    return value + 'x';
+                                }
+                            }
+                        }
+                    },
+                    animations: {
+                        duration: 500,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        }
+
+        // 更新媒体对比图表
+        function updateMediaComparisonChart() {
+            const chart = chartInstances.mediaComparison;
+            const metric = document.getElementById('media-metric').value;
+            const days = getDaysByTimeRange(currentTimeRange);
+            const baseMultiplier = days > 90 ? 2 : 1; // 1年数据数值放大
+            
+            const labels = ['Facebook', 'TikTok', 'Google', 'Snapchat'];
+            let data, label, color, tickFormat;
+            
+            switch(metric) {
+                case 'roas':
+                    data = labels.map(() => (Math.random() * 4 + 1 * baseMultiplier).toFixed(2));
+                    label = 'ROAS (x)';
+                    color = '#165DFF';
+                    tickFormat = value => value + 'x';
+                    break;
+                case 'cpm':
+                    data = labels.map(() => (Math.random() * 10 + 8 * baseMultiplier).toFixed(2));
+                    label = 'CPM ($)';
+                    color = '#FF7D00';
+                    tickFormat = value => '$' + value;
+                    break;
+                case 'ctr':
+                    data = labels.map(() => (Math.random() * 2 + 1).toFixed(2));
+                    label = 'CTR (%)';
+                    color = '#00B42A';
+                    tickFormat = value => value + '%';
+                    break;
+                case 'cpi':
+                    data = labels.map(() => (Math.random() * 1.5 + 1 * baseMultiplier).toFixed(2));
+                    label = 'CPI ($)';
+                    color = '#722ED1';
+                    tickFormat = value => '$' + value;
+                    break;
+            }
+            
+            chart.data.datasets[0].label = label;
+            chart.data.datasets[0].data = data;
+            chart.data.datasets[0].borderColor = color;
+            chart.data.datasets[0].backgroundColor = color + '20';
+            chart.data.datasets[0].pointBackgroundColor = color;
+            
+            chart.options.scales.r.ticks.callback = tickFormat;
+            chart.update();
+        }
+
+        // 更新表格数据（新增设备列展示）
+        function updateTableData() {
+            const tableBody = document.getElementById('data-table-body');
+            const prevBtn = document.getElementById('prev-page');
+            const nextBtn = document.getElementById('next-page');
+            const pageInfo = document.getElementById('page-info');
+            
+            // 获取筛选后的数据
+            const filteredData = getFilteredData();
+            
+            // 清空表格
+            tableBody.innerHTML = '';
+            
+            // 计算分页
+            const totalPages = Math.ceil(filteredData.length / pageSize);
+            const startIndex = (currentPage - 1) * pageSize;
+            const endIndex = Math.min(startIndex + pageSize, filteredData.length);
+            const paginatedData = filteredData.slice(startIndex, endIndex);
+            
+            // 更新分页信息
+            pageInfo.textContent = `${currentPage} / ${totalPages}`;
+            
+            // 更新分页按钮状态
+            prevBtn.disabled = currentPage === 1;
+            nextBtn.disabled = currentPage === totalPages;
+            
+            // 更新总记录数
+            document.getElementById('total-records').textContent = filteredData.length;
+            
+            // 生成表格行
+            paginatedData.forEach(item => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-neutral-100 hover:bg-neutral-50 transition-colors';
+                
+                // 映射显示文本
+                const productText = item.product === 'iap' ? 'IAP' : 'IAA';
+                const deliveryText = item.delivery === 'app' ? 'APP直投' : 'W2A';
+                const mediaText = {
+                    'facebook': 'Facebook',
+                    'tiktok': 'TikTok',
+                    'google': 'Google',
+                    'snapchat': 'Snapchat'
+                }[item.media];
+                const countryText = {
+                    'us': '美国',
+                    'uk': '英国',
+                    'au': '澳大利亚',
+                    'ca': '加拿大',
+                    'sg': '新加坡'
+                }[item.country];
+                // 新增设备类型文本映射（带颜色标识）
+                const deviceText = item.device === 'ios' 
+                    ? '<span class="flex items-center"><i class="fa fa-apple text-ios mr-1"></i> iOS</span>' 
+                    : '<span class="flex items-center"><i class="fa fa-android text-android mr-1"></i> Android</span>';
+                const optimizationText = {
+                    'install': 'Install (安装量优化)',
+                    'aeo': 'AEO (广告支出优化)',
+                    'vo': 'VO (价值优化)'
+                }[item.optimization];
+                
+                row.innerHTML = `
+                    <td class="py-3 px-4 text-neutral-700">${item.date}</td>
+                    <td class="py-3 px-4 text-neutral-700">${productText}</td>
+                    <td class="py-3 px-4 text-neutral-700">${deliveryText}</td>
+                    <td class="py-3 px-4 text-neutral-700">${mediaText}</td>
+                    <td class="py-3 px-4 text-neutral-700">${countryText}</td>
+                    <td class="py-3 px-4 text-neutral-700">${deviceText}</td> <!-- 设备列 -->
+                    <td class="py-3 px-4 text-neutral-700">${optimizationText}</td>
+                    <td class="py-3 px-4 text-neutral-700 text-right">$${item.cpm}</td>
+                    <td class="py-3 px-4 text-neutral-700 text-right">${item.ctr}%</td>
+                    <td class="py-3 px-4 text-neutral-700 text-right">$${item.cpi}</td>
+                    <td class="py-3 px-4 text-neutral-700 text-right">${item.d0Roas}x</td>
+                    <td class="py-3 px-4 text-neutral-700 text-right">${item.d7Roas}x</td>
+                `;
+                
+                tableBody.appendChild(row);
+            });
+        }
+
+        // 更新整个仪表盘
+        function updateDashboard() {
+            // 获取当前时间范围对应的天数
+            const days = getDaysByTimeRange(currentTimeRange);
+            
+            // 重新生成模拟数据
+            generateMockData(days);
+            
+            // 生成大盘数据随机值（随时间范围调整数值规模）
+            const baseMultiplier = days > 90 ? 5 : (days > 30 ? 3 : 1);
+            const impressions = Math.floor(Math.random() * 500000 * baseMultiplier + 1000000 * baseMultiplier).toLocaleString();
+            const spend = (Math.random() * 5000 * baseMultiplier + 15000 * baseMultiplier).toFixed(2);
+            const installs = Math.floor(Math.random() * 2000 * baseMultiplier + 7000 * baseMultiplier).toLocaleString();
+            const cpm = (Math.random() * 10 + 8 * (days > 90 ? 2 : 1)).toFixed(2);
+            const cpi = (Math.random() * 1.5 + 1 * (days > 90 ? 2 : 1)).toFixed(2);
+            const ctr = (Math.random() * 2 + 1).toFixed(2);
+            const roas = (Math.random() * 3 + 2 * (days > 90 ? 1.5 : 1)).toFixed(2);
+            
+            // 更新大盘数据数值
+            document.getElementById('impressions-value').textContent = impressions;
+            document.getElementById('spend-value').textContent = `$${spend}`;
+            document.getElementById('installs-value').textContent = installs;
+            document.getElementById('total-cpm-value').textContent = `$${cpm}`;
+            document.getElementById('total-cpi-value').textContent = `$${cpi}`;
+            document.getElementById('total-ctr-value').textContent = `${ctr}%`;
+            document.getElementById('total-roas-value').textContent = `${roas}x`;
+            
+            // 更新核心数据卡片数值
+            document.getElementById('cpm-value').textContent = `$${cpm}`;
+            document.getElementById('ctr-value').textContent = `${ctr}%`;
+            document.getElementById('cpi-value').textContent = `$${cpi}`;
+            document.getElementById('roas-value').textContent = `${roas}x`;
+            
+            // 更新图表
+            updateMetricsTrendChart();
+            updateROASDistributionChart();
+            updateMediaComparisonChart();
+            
+            // 重置分页并更新表格
+            currentPage = 1;
+            updateTableData();
+            
+            // 更新最后更新时间
+            const now = new Date();
+            const updateTime = now.toISOString().slice(0, 19).replace('T', ' ');
+            document.getElementById('update-time').textContent = updateTime;
+        }
+    </script>
+</body>
+</html>
